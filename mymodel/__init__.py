@@ -1,7 +1,3 @@
-"""
-mymodel - VAE消融实验模型包
-包含：AdaptiveVAE、谱域混合器块、基础组件、4种消融变体
-"""
 from .components import (
     DataAdaptivePropagation,
     StructureAwareFrequencySelectiveMixer,

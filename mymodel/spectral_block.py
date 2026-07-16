@@ -1,7 +1,3 @@
-"""
-改进版谱域混合器块
-保留块内局部传播，图结构信息由谱域混合器负责提取
-"""
 import torch
 import torch.nn as nn
 
@@ -13,7 +9,6 @@ from .shared_spectral_mixer import (
 
 
 class ImprovedSpectralMixerBlock(nn.Module):
-    """改进版谱域混合器块 - 保留块内局部传播"""
     def __init__(self, dim, order=2, rank=8, ff_mult=4, dropout=0.1, filter_mode='personalized'):
         super().__init__()
         self.order = order

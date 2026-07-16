@@ -1,8 +1,3 @@
-"""
-mymodel 组件
-包含谱域混合器和特征融合所需的基础模块
-"""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,10 +5,6 @@ import numpy as np
 
 
 class DataAdaptivePropagation(nn.Module):
-    """
-    数据自适应局部传播：基于全局度数分布自适应阈值
-    复杂度：O(E + N)
-    """
     def __init__(self, norm=True):
         super().__init__()
         self.norm = norm
@@ -46,13 +37,6 @@ class DataAdaptivePropagation(nn.Module):
 
 
 class StructureAwareFrequencySelectiveMixer(nn.Module):
-    """
-    结构感知频率选择谱域混合器
-    - 利用图结构信息指导滤波器生成
-    - 频率选择性：区分高频/低频分量
-    - 多阶递归更新机制
-    复杂度：O(N log N + E)
-    """
     def __init__(self, dim, order=3, rank=16, dropout=0.1):
         super().__init__()
         self.dim = dim
@@ -149,10 +133,6 @@ class StructureAwareFrequencySelectiveMixer(nn.Module):
 
 
 class AdaptiveFeatureFusion(nn.Module):
-    """
-    自适应特征融合：为每个节点学习最佳alpha权重
-    复杂度：O(Nd)
-    """
     def __init__(self, output_dim):
         super().__init__()
         self.alpha_predictor = nn.Sequential(

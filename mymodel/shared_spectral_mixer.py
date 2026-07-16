@@ -1,39 +1,21 @@
-"""
-Shared Frequency Selective Mixer
-共享频谱滤波器版本 - 所有节点共享同一可学习频谱响应
-
-用于 Shared vs. Personalized Spectral Filter 对比实验
-"""
-
 import torch
 import torch.nn as nn
 import numpy as np
 
 
 class SharedFrequencySelectiveMixer(nn.Module):
-    """
-    共享频谱滤波器版本
-    - 所有节点共享同一个可学习的频谱响应 g(ω)
-    - 保留完整的模型骨架（投影、频域滤波、残差）
-    - 不依赖节点结构统计生成滤波器
-
-    参数量显著少于 Personalized 版本（无 struct_encoder + filter_generators MLPs）
-    """
     def __init__(self, dim, order=3, rank=16, dropout=0.1):
         super().__init__()
         self.dim = dim
         self.order = order
         self.rank = rank
 
-        # 与 Personalized 版本完全相同的投影层
         self.proj_layer = nn.Linear(dim, dim * (order + 1))
 
-        # 共享滤波器参数（全局可学习，不依赖节点结构）
         self.shared_filters = nn.ParameterList([
             nn.Parameter(torch.randn(dim) * 0.01) for _ in range(order)
         ])
 
-        # 频率门控（与 Personalized 版本相同）
         self.freq_gates = nn.ParameterList([
             nn.Parameter(torch.randn(dim) * 0.01) for _ in range(order)
         ])
@@ -42,7 +24,6 @@ class SharedFrequencySelectiveMixer(nn.Module):
         N = x.size(0)
         device = x.device
 
-        # 投影（与 Personalized 版本完全相同）
         proj_out = self.proj_layer(x)
         proj_splits = torch.split(proj_out, self.dim, dim=-1)
 
@@ -50,19 +31,10 @@ class SharedFrequencySelectiveMixer(nn.Module):
         Ps = proj_splits[:-1]
 
         for i in range(self.order):
-            # 共享滤波器扩展到所有节点 [dim] -> [N, dim]
             filt = self.shared_filters[i].unsqueeze(0).expand(N, -1)
 
-            # 使用元素级乘法代替FFT卷积
-            # 这等价于在时域进行逐元素滤波
-            # p_fft * f_fft 的逆变换对应于时域卷积
-            # 这里我们简化为逐元素乘法，保持与原始设计的一致性
-            
-            # 应用频率门控和衰减（在时域近似）
             freq_importance = torch.sigmoid(self.freq_gates[i])
             
-            # 直接逐元素乘法（ Shared Filter的核心操作）
-            # 每个节点的特征与共享滤波器进行逐元素乘法
             conv_out = Ps[i] * filt * freq_importance.unsqueeze(0)
 
             V = V * conv_out
@@ -82,13 +54,6 @@ class SharedFrequencySelectiveMixer(nn.Module):
 
 
 class StructureAwareFrequencySelectiveMixer(nn.Module):
-    """
-    结构引导个性化频谱滤波器版本（从 components.py 复制并添加 get_frequency_responses）
-    - 每个节点根据轻量结构统计生成自己的频率响应
-    - s_i = [degree_i, local_density_i]
-    - g_i(ω) = MLP(s_i)
-    - MLP Parameter Generator 是共享的，但输出的滤波器是 node-specific 的
-    """
     def __init__(self, dim, order=3, rank=16, dropout=0.1):
         super().__init__()
         self.dim = dim
@@ -185,14 +150,6 @@ class StructureAwareFrequencySelectiveMixer(nn.Module):
         return V
 
     def get_frequency_responses(self, edge_index, N, device, node_mask=None):
-        """
-        获取每阶的个性化频率响应（用于可视化）
-
-        Returns:
-            responses: list of arrays, each [num_nodes, num_freq_bins]
-            struct_features: [N, 2] tensor of [deg_norm, local_density]
-        """
-        # 计算结构特征
         struct_features = self._compute_structural_features(edge_index, N, device)
         struct_enc = self.struct_encoder(struct_features)
         pos_enc = self._positional_encoding(N, device)
@@ -201,7 +158,6 @@ class StructureAwareFrequencySelectiveMixer(nn.Module):
         responses = []
         for i in range(self.order):
             filt = self.filter_generators[i](combined_enc)
-            # 在节点维度进行FFT
             f_fft = torch.fft.rfft(filt, dim=0, norm='ortho')
             responses.append(f_fft.abs().detach().cpu().numpy())
 
