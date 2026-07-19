@@ -1,15 +1,15 @@
-# VASPE: Variational Autoencoder with Spectral Filters for Graph Representation Learning
+# SSP-GRL: Graph Representation Learning with Spectral Filters
 
-Official implementation of **VASPE** — a graph representation learning framework combining Variational Autoencoders with spectral-domain frequency-selective filters.
+Official implementation of **SSP-GRL** — a graph representation learning framework combining Variational Autoencoders with spectral-domain frequency-selective filters.
 
 ## Installation
 
 ```bash
-git clone https://github.com/your-username/VASPE.git
-cd VASPE
+git clone https://github.com/Glitxi-ZD/SSP-GRL.git
+cd SSP-GRL
 
-conda create -n vaspe python=3.10
-conda activate vaspe
+conda create -n ssp_grl python=3.10
+conda activate ssp_grl
 
 pip install torch torchvision torch_geometric
 pip install scikit-learn numpy
