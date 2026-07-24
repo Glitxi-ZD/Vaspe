@@ -107,7 +107,7 @@ def train(dataset_name, dataset, args, device):
     set_seed(args.seed)
 
     dataset = load_dataset(dataset_name, task='link_prediction', root=args.data_root,
-                           train_ratio=0.7, val_ratio=0.15, seed=args.seed)
+                           train_ratio=0.8, val_ratio=0.1, seed=args.seed)
 
     model = VAEFullModel(
         input_dim=dataset.num_features,
@@ -202,7 +202,7 @@ def train(dataset_name, dataset, args, device):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='VASPE Link Prediction')
+    parser = argparse.ArgumentParser(description='SSP-GRL Link Prediction')
     parser.add_argument('--datasets', nargs='+', default=None, choices=ALL_DATASETS)
     parser.add_argument('--data-root', default=os.path.join(ROOT_DIR, 'data'))
     parser.add_argument('--output', default=os.path.join(ROOT_DIR, 'results', 'link_prediction.json'))

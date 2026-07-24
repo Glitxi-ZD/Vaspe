@@ -33,28 +33,34 @@ def set_seed(seed):
 class CitationData:
     NAME_MAP = {'cora': 'Cora', 'citeseer': 'CiteSeer', 'pubmed': 'PubMed'}
 
-    def __init__(self, name, root='./data'):
-        from torch_geometric.datasets import Planetoid
-        from torch_geometric.utils import to_undirected, remove_self_loops
-
-        pyg_name = self.NAME_MAP[name]
-        dataset = Planetoid(root=root, name=pyg_name)
-        data = dataset[0]
-
-        edge_index = remove_self_loops(data.edge_index)[0]
-        self.full_edge_index = to_undirected(edge_index)
-        self.node_features = data.x
-        self.y = data.y
-        self.num_nodes = data.num_nodes
-        self.num_features = data.num_features
-        self.num_classes = dataset.num_classes
-
-        self.train_mask = data.train_mask
-        self.val_mask = data.val_mask
-        self.test_mask = data.test_mask
+    def __init__(self, name, root='./data', train_ratio=0.8, val_ratio=0.1, seed=42):
+        from data_loaders import load_dataset
+        ds = load_dataset(name, task='node_classification', root=root,
+                          train_ratio=train_ratio, val_ratio=val_ratio, seed=seed)
+        self.node_features = ds.node_features
+        self.y = ds.y
+        self.num_nodes = ds.num_nodes
+        self.num_features = ds.num_features
+        self.num_classes = ds.num_classes
+        self._train_mask = ds.train_mask
+        self._val_mask = ds.val_mask
+        self._test_mask = ds.test_mask
+        self._full_edge_index = ds.full_edge_index
 
     def get_train_edge_index(self):
-        return self.full_edge_index
+        return self._full_edge_index
+
+    @property
+    def train_mask(self):
+        return self._train_mask
+
+    @property
+    def val_mask(self):
+        return self._val_mask
+
+    @property
+    def test_mask(self):
+        return self._test_mask
 
 
 class NonCitationData:
@@ -90,7 +96,8 @@ class NonCitationData:
 
 def load_data(dataset_name, args):
     if dataset_name in CITATION_DATASETS:
-        return CitationData(dataset_name, root=args.data_root)
+        return CitationData(dataset_name, root=args.data_root,
+                            train_ratio=0.8, val_ratio=0.1, seed=args.seed)
     else:
         return NonCitationData(dataset_name, root=args.data_root, seed=args.seed)
 
@@ -122,12 +129,7 @@ def train(dataset_name, dataset, args, device):
     test_mask = dataset.test_mask.to(device)
 
     is_citation = dataset_name in CITATION_DATASETS
-    if is_citation:
-        num_classes = dataset.num_classes
-        per_class = int(train_mask.sum().item()) // num_classes
-        print(f"  Semi-supervised: {train_mask.sum().item()} labeled ({per_class}/class)")
-    else:
-        print(f"  Split: {train_mask.sum()} train / {val_mask.sum()} val / {test_mask.sum()} test")
+    print(f"  Split: {train_mask.sum().item()} train / {val_mask.sum().item()} val / {test_mask.sum().item()} test (random 8:1:1)")
 
     best_val_acc = 0.0
     patience_counter = 0
@@ -193,7 +195,7 @@ def train(dataset_name, dataset, args, device):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='VASPE Node Classification')
+    parser = argparse.ArgumentParser(description='SSP-GRL Node Classification')
     parser.add_argument('--datasets', nargs='+', default=None, choices=ALL_DATASETS)
     parser.add_argument('--data-root', default=os.path.join(ROOT_DIR, 'data'))
     parser.add_argument('--output', default=os.path.join(ROOT_DIR, 'results', 'node_classification.json'))
